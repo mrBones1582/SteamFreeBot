@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Steam Free Bot</title>
+  <script src="/static/i18n.js" defer></script>
+  <style>
+    :root{color-scheme:dark;--bg:#111827;--panel:#1f2937;--panel2:#0f172a;--line:#374151;--text:#e5e7eb;--muted:#9ca3af;--accent:#38bdf8;--green:#86efac;--amber:#fbbf24;--red:#f87171}
+    *{box-sizing:border-box}html{scroll-padding-top:96px}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:var(--text)}a{color:#7dd3fc}.muted{color:var(--muted)}
+    .site-header{position:sticky;top:0;z-index:1000;background:rgba(17,24,39,.97);border-bottom:1px solid #243244;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .header-inner,.page{max-width:1320px;margin:0 auto;padding-left:16px;padding-right:16px}.header-inner{padding-top:6px;padding-bottom:6px}.header-line{display:flex;align-items:center;gap:12px;min-width:0}.header-line h1{font-size:21px;line-height:1.1;margin:0;white-space:nowrap}.header-line .version{font-size:.62em;font-weight:600}.header-line .description{flex:1;min-width:0;margin:0;color:#cbd5e1;font-size:11px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.header-status{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0;font-size:11px;color:var(--muted);white-space:nowrap}.language-control{display:flex;align-items:center;gap:5px;color:#cbd5e1}.language-control select{padding:5px 7px;border:1px solid #475569;border-radius:7px;background:var(--panel2);color:#f8fafc}.scan-time{overflow:hidden;text-overflow:ellipsis}.scan-short{display:none}
+    button{font:inherit}.scan,.reset,.view-btn,.filter-toggle{border:0;border-radius:8px;cursor:pointer;font-weight:700}.scan{padding:7px 11px;background:#e5e7eb;color:#111827;white-space:nowrap}.scan:disabled{opacity:.65;cursor:wait}.scan-mobile{display:none}
+    .filter-toggle{display:none;padding:6px 9px;background:#334155;color:#e2e8f0;border:1px solid #475569;white-space:nowrap}
+    .page{padding-top:10px;padding-bottom:30px}.toolbar{background:var(--panel);padding:12px 15px;border-radius:12px;margin:0 0 8px;display:grid;gap:10px}.tabs-row{display:flex;align-items:center;gap:10px}.tabs{display:flex;gap:7px;flex-wrap:wrap;flex:1;min-width:0}.tab{background:#334155;color:#e2e8f0;border:1px solid #475569;padding:6px 11px;border-radius:999px;cursor:pointer}.tab.active{background:var(--accent);color:#082f49;border-color:var(--accent);font-weight:700}
+    .filters{display:grid;grid-template-columns:repeat(5,minmax(135px,1fr));gap:12px;align-items:end}.field{display:grid;gap:5px;font-size:14px;color:#cbd5e1}.field select{width:100%;padding:9px 10px;border:1px solid #475569;border-radius:8px;background:var(--panel2);color:#f8fafc}.reset{padding:6px 10px;background:#475569;color:#f8fafc;white-space:nowrap}.diag-details{font-size:11px;color:var(--muted);margin-left:8px}.diag-details summary{cursor:pointer;color:#cbd5e1}.diag{display:block;margin-top:6px;line-height:1.45}
+    .resultbar{display:flex;align-items:center;gap:10px;min-height:34px;padding:0 2px}.header-resultbar{margin-top:5px;padding-top:5px;border-top:1px solid #243244}.count{font-weight:800}.view-switch{margin-left:auto;display:flex;gap:6px}.view-btn{padding:8px 12px;background:#334155;color:#e2e8f0;border:1px solid #475569}.view-btn.active{background:var(--accent);color:#082f49;border-color:var(--accent)}
+    .items{display:grid;gap:8px}.item{background:var(--panel);border:1px solid transparent}.thumb-link{display:block;line-height:0;text-decoration:none}.item.hidden{display:none!important}
+    .items.list-view{grid-template-columns:1fr}.list-view .item{display:grid;grid-template-columns:112px minmax(0,1fr);gap:12px;align-items:center;padding:8px 12px;border-radius:9px}.list-view .thumb{display:block;width:112px;height:52px;object-fit:cover;border-radius:6px;background:#0b1220}.list-view .item-body{display:grid;grid-template-columns:minmax(230px,2.4fr) 88px 118px 165px minmax(160px,1fr);gap:10px;align-items:center}
+    .title{font-size:16px;font-weight:750;min-width:0}.title a{color:#dbeafe;text-decoration:none}.title a:hover{text-decoration:underline;color:#7dd3fc}.discount{font-weight:800;color:var(--amber);font-size:16px;white-space:nowrap}.discount.free{color:var(--green)}.price{text-align:right;white-space:nowrap}.old{text-decoration:line-through;color:var(--muted);font-size:12px}.current{font-weight:800}.meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;min-width:0}.badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#334155;font-size:11px;white-space:nowrap;flex:0 0 auto}.badge.jp{background:#14532d;color:#bbf7d0}.badge.nojp{background:#3f3f46;color:#d4d4d8}.badge.game{background:#1e3a8a;color:#bfdbfe}.badge.dlc{background:#581c87;color:#e9d5ff}.badge.other{background:#3f3f46;color:#e4e4e7}.genres{color:#cbd5e1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sale-end{font-size:12px;line-height:1.25;padding:5px 7px;border-radius:7px;color:#cbd5e1;background:#111827;border:1px solid #334155}.sale-end .end{font-weight:800;display:block;white-space:nowrap}.sale-end .remain{font-size:11px;color:var(--muted);display:block;white-space:nowrap}.sale-end.soon{background:#422006;border-color:#d97706;color:#fde68a}.sale-end.soon .remain{color:#fbbf24;font-weight:800}.sale-end.urgent{background:#450a0a;border-color:#ef4444;color:#fecaca;box-shadow:0 0 0 1px rgba(239,68,68,.2)}.sale-end.urgent .remain{color:#fca5a5;font-weight:900}.sale-end.unknown{opacity:.62}
+    .items.card-view{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card-view .item{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;padding:10px 12px;border-radius:10px}.card-view .thumb{display:block;width:170px;aspect-ratio:460/215;object-fit:cover;border-radius:7px;background:#0b1220}.card-view .item-body{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title discount" "price saleend" "meta meta";gap:5px 10px;align-content:center;align-items:center}.card-view .title{grid-area:title;font-size:17px;line-height:1.2}.card-view .discount{grid-area:discount;text-align:right}.card-view .price{grid-area:price;text-align:left}.card-view .sale-end{grid-area:saleend;width:max-content;max-width:100%;padding:4px 6px}.card-view .sale-end .end,.card-view .sale-end .remain{display:inline}.card-view .sale-end .remain{margin-left:5px}.card-view .meta{grid-area:meta;flex-wrap:nowrap;overflow:hidden;min-width:0}.card-view .genres{display:block;min-width:0;max-width:100%;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.empty{background:var(--panel);padding:18px;border-radius:12px}.hidden{display:none!important}.admin-link{margin-top:16px;text-align:right;font-size:12px}.admin-link a{color:#94a3b8}
+    @media(max-width:1050px){.filters{grid-template-columns:repeat(3,1fr)}.list-view .item-body{grid-template-columns:minmax(190px,2fr) 80px 105px 150px}.list-view .genres{display:none}}
+    @media(max-width:760px){.filters{grid-template-columns:1fr 1fr}.list-view .item{grid-template-columns:96px minmax(0,1fr);gap:10px}.list-view .thumb{width:96px;height:45px}.items.card-view{grid-template-columns:1fr}.card-view .item{grid-template-columns:150px minmax(0,1fr)}.card-view .thumb{width:150px}}
+    @media(max-width:600px){
+      html{scroll-padding-top:104px}.header-inner,.page{padding-left:10px;padding-right:10px}.header-inner{padding-top:5px;padding-bottom:5px}.header-line{gap:7px;flex-wrap:wrap}.header-line h1{font-size:17px}.header-line .description{display:none}.header-status{gap:5px;font-size:9px}.language-control>span{display:none}.language-control select{padding:4px 5px;font-size:10px}.scan-full,.scan-time-prefix{display:none}.scan-short{display:inline}.scan{padding:4px 7px;font-size:10px}.scan-desktop{display:none}.scan-mobile{display:inline}.filter-toggle{display:block;padding:4px 7px;font-size:10px}
+      .page{padding-top:6px}.toolbar{display:none;padding:8px 9px;margin-bottom:6px;gap:8px}.toolbar.open{display:grid}.tabs-row{align-items:flex-start;gap:6px}.tabs{gap:5px}.tab{padding:5px 8px;font-size:11px;flex:1 1 auto;text-align:center}.filters{grid-template-columns:1fr;gap:7px}.field{font-size:11px}.field select{padding:7px 8px}.reset{padding:5px 8px;font-size:10px}.diag-details{font-size:9px;margin-left:4px}.header-resultbar{margin-top:4px;padding-top:4px}.resultbar{min-height:30px;font-size:11px;gap:6px}.view-btn{padding:5px 8px;font-size:11px}
+      .list-view .item{grid-template-columns:72px minmax(0,1fr);gap:7px;padding:6px 8px}.list-view .thumb{width:72px;height:40px}.list-view .item-body{grid-template-columns:minmax(0,1fr) auto;gap:4px 8px}.list-view .price{grid-column:1/2;text-align:left;font-size:12px}.list-view .meta{grid-column:2/3;grid-row:2}.list-view .sale-end{grid-column:1/-1;padding:4px 6px}.list-view .title{font-size:14px;line-height:1.2}.list-view .title a{color:#7dd3fc;text-decoration:underline;text-decoration-color:rgba(125,211,252,.45);text-underline-offset:2px}.list-view .discount{text-align:right;font-size:14px}.card-view .item{grid-template-columns:1fr;padding:8px}.card-view .thumb{width:100%}.card-view .item-body{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title discount" "price saleend" "meta meta";gap:4px 8px}.card-view .meta{width:100%;min-width:0}.card-view .genres{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-line">
+        <h1>Steam Free Bot <small class="muted version">v1.4.2</small></h1>
+        <p class="description" data-i18n="description" data-discount="{{ min_discount }}">Collects Steam Store titles at {{ min_discount }}% off or more and verifies price, language support, genre, type, and sale end time.</p>
+        <div class="header-status">
+          <label class="language-control"><span data-i18n="language">Language</span><select class="ui-language" aria-label="Language"><option value="en">English</option><option value="ja">Japanese</option></select></label>
+          <span class="scan-time"><span class="scan-time-prefix" data-i18n="last_checked">Last checked:</span> <span class="scan-full">{{ last_scan }}</span><span class="scan-short">{{ last_scan[5:16] if last_scan else 'Never' }}</span></span>
+          <button class="scan" id="scan-button" type="button"><span class="scan-desktop" data-i18n="check_now">Check now</span><span class="scan-mobile" data-i18n="check">Check</span></button>
+          <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-panel" data-i18n="change_filters">Filters</button>
+        </div>
+      </div>
+      <div class="resultbar header-resultbar">
+        <span><span data-i18n="showing">Showing</span>: <span class="count" id="visible-count">0</span> / {{ rows|length }} <span data-i18n="items">items</span></span>
+        <details class="diag-details"><summary data-i18n="scan_info">Scan details</summary><span class="diag" data-search="{{ diagnostics.search_rows }}" data-parsed="{{ diagnostics.discount_parsed }}" data-max="{{ diagnostics.max_discount }}" data-candidates="{{ diagnostics.candidates }}" data-verified="{{ diagnostics.verified }}" data-errors="{{ diagnostics.errors }}" data-method="{{ diagnostics.fetch_method }}" data-http="{{ diagnostics.fetch_http }}">Search {{ diagnostics.search_rows }} → discounts parsed {{ diagnostics.discount_parsed }} (max {{ diagnostics.max_discount }}%) → candidates {{ diagnostics.candidates }} → verified {{ diagnostics.verified }} / errors {{ diagnostics.errors }}<br>Fetch: {{ diagnostics.fetch_method }} / HTTP {{ diagnostics.fetch_http }}</span></details>
+        <div class="view-switch" aria-label="View format" data-i18n-aria-label="view_format"><button type="button" class="view-btn active" data-view="list" data-i18n="list">List</button><button type="button" class="view-btn" data-view="card" data-i18n="card">Cards</button></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="toolbar" id="filter-panel" aria-label="Filters and sorting" data-i18n-aria-label="filter_area">
+      <div class="tabs-row">
+        <div class="tabs" id="genre-tabs">
+          {% for key,label in genre_tabs %}<button type="button" class="tab{{ ' active' if key == 'all' else '' }}" data-genre="{{ key }}" data-i18n="genre_{{ key }}">{{ label }}</button>{% endfor %}
+        </div>
+        <button type="button" class="reset" id="reset-button" data-i18n="reset_filters">Reset filters</button>
+      </div>
+      <div class="filters">
+        <label class="field"><span data-i18n="discount">Discount</span>
+          <select id="discount-filter"><option value="all" data-i18n="discount_all">80% off or more</option><option value="90plus" data-i18n="discount_90">90% off or more</option><option value="free" data-i18n="free_only">Free only</option></select>
+        </label>
+        <label class="field"><span data-i18n="type">Type</span>
+          <select id="type-filter"><option value="all" data-i18n="any">Any</option><option value="game" selected data-i18n="games_only">Games only</option><option value="dlc" data-i18n="dlc_only">DLC only</option></select>
+        </label>
+        <label class="field"><span data-i18n="language_support">Language support</span>
+          <select id="language-filter"><option value="all" data-i18n="any">Any</option><option value="en" selected data-i18n="english_only">English only</option><option value="jp" data-i18n="japanese_only">Japanese only</option></select>
+        </label>
+        <label class="field"><span data-i18n="sort">Sort by</span>
+          <select id="sort-key"><option value="discount" data-i18n="discount_rate">Discount rate</option><option value="name" data-i18n="name">Name</option><option value="price" selected data-i18n="current_price">Current price</option></select>
+        </label>
+        <label class="field"><span data-i18n="order">Order</span>
+          <select id="sort-dir"><option value="desc" data-i18n="descending">Descending</option><option value="asc" selected data-i18n="ascending">Ascending</option></select>
+        </label>
+      </div>
+    </section>
+
+
+    <div class="items list-view" id="items">
+      {% for r in rows %}
+      <article class="item" data-title="{{ r.title|e }}" data-discount="{{ r.discount_percent or 0 }}" data-price="{{ r.current_price_value if r.current_price_value is not none else 999999999 }}" data-en="{{ 1 if r.english_supported else 0 }}" data-jp="{{ 1 if r.japanese_supported else 0 }}" data-type="{{ r.product_type or 'other' }}" data-genres=",{{ r.genre_keys or 'other' }},">
+        {% if r.header_image %}<a class="thumb-link" href="{{ r.url }}" target="_blank" rel="noopener" aria-label="{{ r.title }} をSteamで開く"><img class="thumb" src="{{ r.header_image }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>{% else %}<a class="thumb thumb-link" href="{{ r.url }}" target="_blank" rel="noopener" aria-label="{{ r.title }} をSteamで開く"></a>{% endif %}
+        <div class="item-body">
+          <div class="title"><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a></div>
+          <div class="discount{{ ' free' if r.discount_percent == 100 and (r.current_price_value or 0) == 0 else '' }}">{{ r.discount_percent }}% OFF</div>
+          <div class="price"><span class="old">{{ r.original_price or '-' }}</span> <span class="current"{% if (r.current_price_value or 0) == 0 %} data-i18n="free"{% endif %}>{{ r.current_price or ('Free' if (r.current_price_value or 0) == 0 else '-') }}</span></div>
+          <div class="sale-end {{ r.end_level }}" data-end="{{ r.end_display }}" data-unknown="{{ 1 if r.remaining_seconds is none else 0 }}" data-remaining="{{ r.remaining_seconds if r.remaining_seconds is not none else '' }}"><span class="end">Ends {{ r.end_display }}</span>{% if r.remaining_display %}<span class="remain">{{ r.remaining_display }}</span>{% endif %}</div>
+          <div class="meta"><span class="badge {{ r.product_type or 'other' }}" data-i18n="{{ r.product_type or 'other' }}">{{ r.product_type_label }}</span><span class="badge {{ 'jp' if r.english_supported else 'nojp' }}" data-i18n="{{ 'english' if r.english_supported else 'no_english' }}">{{ 'English' if r.english_supported else 'No English' }}</span><span class="badge {{ 'jp' if r.japanese_supported else 'nojp' }}" data-i18n="{{ 'japanese' if r.japanese_supported else 'no_japanese' }}">{{ 'Japanese' if r.japanese_supported else 'No Japanese' }}</span><span class="genres">{{ r.genre_names or 'Other' }}</span></div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <div class="empty{{ '' if not rows else ' hidden' }}" id="empty-message" data-i18n="no_results">No titles match the current filters.</div>
+    <div class="admin-link"><a href="/admin/recipients" data-i18n="recipient_admin">Recipient administration</a></div>
+  </main>
+
+  <script>
+    let activeGenre='all';
+    const items=[...document.querySelectorAll('.item')],root=document.getElementById('items');
+    const discountFilter=document.getElementById('discount-filter'),typeFilter=document.getElementById('type-filter'),languageFilter=document.getElementById('language-filter'),sortKey=document.getElementById('sort-key'),sortDir=document.getElementById('sort-dir'),visibleCount=document.getElementById('visible-count'),emptyMessage=document.getElementById('empty-message');
+    const filterPanel=document.getElementById('filter-panel'),filterToggle=document.getElementById('filter-toggle');
+    function matches(item){const d=Number(item.dataset.discount),p=Number(item.dataset.price),en=item.dataset.en==='1',jp=item.dataset.jp==='1';if(activeGenre!=='all'&&!item.dataset.genres.includes(','+activeGenre+','))return false;if(discountFilter.value==='90plus'&&d<90)return false;if(discountFilter.value==='free'&&!(d===100&&p===0))return false;if(typeFilter.value!=='all'&&item.dataset.type!==typeFilter.value)return false;if(languageFilter.value==='en'&&!en)return false;if(languageFilter.value==='jp'&&!jp)return false;return true}
+    function compare(a,b){const dir=sortDir.value==='asc'?1:-1;if(sortKey.value==='name')return dir*a.dataset.title.localeCompare(b.dataset.title,'ja',{sensitivity:'base'});const av=Number(sortKey.value==='price'?a.dataset.price:a.dataset.discount),bv=Number(sortKey.value==='price'?b.dataset.price:b.dataset.discount);if(av===bv)return a.dataset.title.localeCompare(b.dataset.title,'ja',{sensitivity:'base'});return dir*(av-bv)}
+    function apply(){let count=0;[...items].sort(compare).forEach(item=>{root.appendChild(item);const show=matches(item);item.classList.toggle('hidden',!show);if(show)count++});visibleCount.textContent=count;emptyMessage.classList.toggle('hidden',count!==0)}
+    document.getElementById('genre-tabs').addEventListener('click',e=>{const tab=e.target.closest('.tab');if(!tab)return;activeGenre=tab.dataset.genre;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));apply()});
+    [discountFilter,typeFilter,languageFilter,sortKey,sortDir].forEach(x=>x.addEventListener('change',apply));
+    document.querySelectorAll('.view-btn').forEach(btn=>btn.addEventListener('click',()=>{const view=btn.dataset.view;root.classList.toggle('list-view',view==='list');root.classList.toggle('card-view',view==='card');document.querySelectorAll('.view-btn').forEach(x=>x.classList.toggle('active',x===btn));localStorage.setItem('steamfree-view',view)}));
+    document.getElementById('reset-button').addEventListener('click',()=>{activeGenre='all';discountFilter.value='all';typeFilter.value='game';languageFilter.value='en';sortKey.value='price';sortDir.value='asc';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.genre==='all'));apply()});
+    const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+    async function waitForScan(){for(;;){const r=await fetch('/api/scan/status',{cache:'no-store'});if(!r.ok)throw new Error('status failed');const st=await r.json();if(!st.running){if(st.error)throw new Error(st.error);location.reload();return}await sleep(1500)}}
+    const tr=(key,values)=>window.SteamFreeI18n?window.SteamFreeI18n.t(key,values):key;
+    document.getElementById('scan-button').addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;const old=b.innerHTML;b.textContent=tr('scanning');try{const r=await fetch('/api/scan',{method:'POST'});if(!r.ok)throw new Error('scan start failed');const st=await r.json();if(!st.started&&!st.running)throw new Error(st.error||'scan did not start');await waitForScan()}catch(err){b.disabled=false;b.innerHTML=old;alert(tr('scan_failed')+' '+(err.message||''))}});
+    filterToggle.addEventListener('click',()=>{const open=filterPanel.classList.toggle('open');filterToggle.setAttribute('aria-expanded',String(open));filterToggle.textContent=tr(open?'close_filters':'change_filters')});
+    function translateDynamic(){const description=document.querySelector('.description');description.textContent=tr('description',{discount:description.dataset.discount});const diag=document.querySelector('.diag');diag.innerHTML=`${tr('search')} ${diag.dataset.search} → ${tr('parsed_discounts')} ${diag.dataset.parsed} (${tr('maximum')} ${diag.dataset.max}%) → ${tr('candidates')} ${diag.dataset.candidates} → ${tr('verified')} ${diag.dataset.verified} / ${tr('errors')} ${diag.dataset.errors}<br>${tr('fetch')}: ${diag.dataset.method} / HTTP ${diag.dataset.http}`;document.querySelectorAll('.sale-end').forEach(box=>{const end=box.querySelector('.end'),remain=box.querySelector('.remain'),seconds=Number(box.dataset.remaining);end.textContent=tr('end')+' '+(box.dataset.unknown==='1'?tr('date_unknown'):box.dataset.end);if(!remain)return;if(seconds<=0){remain.textContent=tr('ended');return}const days=Math.floor(seconds/86400),hours=Math.floor((seconds%86400)/3600),minutes=Math.max(1,Math.floor((seconds%3600)/60));remain.textContent=days?`${tr('remaining')} ${days} ${tr(days===1?'day':'days')} ${hours} ${tr(hours===1?'hour':'hours')}`:`${tr('remaining')} ${hours} ${tr(hours===1?'hour':'hours')} ${minutes} ${tr(minutes===1?'minute':'minutes')}`});if(filterToggle.getAttribute('aria-expanded')==='true')filterToggle.textContent=tr('close_filters')}
+    document.addEventListener('steamfree:languagechange',translateDynamic);
+    const savedView=localStorage.getItem('steamfree-view')||'list';document.querySelector('.view-btn[data-view="'+savedView+'"]').click();apply();
+  </script>
+</body>
+</html>
