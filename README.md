@@ -65,4 +65,4 @@ Issues and pull requests are welcome. Check that submissions contain no credenti
 
 ## License
 
-No license has been selected yet. The repository owner should choose an appropriate open-source license before allowing reuse, modification, or redistribution.
+This project is licensed under the [MIT License](LICENSE).
