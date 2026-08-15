@@ -18,7 +18,6 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from starlette.requests import Request
@@ -34,9 +33,8 @@ LANG = os.getenv("STEAM_LANGUAGE", "english")
 MIN_DISCOUNT = int(os.getenv("MIN_DISCOUNT_PERCENT", "80"))
 MAX_SEARCH_PAGES = int(os.getenv("MAX_SEARCH_PAGES", "12"))
 
-app = FastAPI(title="Steam Free Bot", version="1.4.2")
+app = FastAPI(title="Steam Free Bot", version="1.5.3")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
-app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 
 
@@ -58,6 +56,27 @@ class SteamSettingsPayload(BaseModel):
     use_referer: bool = True
     fallback_403: bool = True
     accept_language: str = "en-US,en;q=0.9,ja;q=0.6"
+
+
+UI_DEFAULTS = {
+    "ui_default_language": "en",
+    "ui_default_genre": "all",
+    "ui_default_discount": "all",
+    "ui_default_type": "game",
+    "ui_default_language_support": "ja",
+    "ui_default_sort": "price",
+    "ui_default_order": "asc",
+}
+
+
+class UiDefaultsPayload(BaseModel):
+    language: str = Field(pattern="^(en|ja)$")
+    genre: str = Field(pattern="^(all|rpg|slg|action|adventure|casual|sports|racing|other)$")
+    discount: str = Field(pattern="^(all|90plus|free)$")
+    product_type: str = Field(pattern="^(all|game|dlc)$")
+    language_support: str = Field(pattern="^(all|en|ja)$")
+    sort: str = Field(pattern="^(discount|name|price)$")
+    order: str = Field(pattern="^(asc|desc)$")
 
 GENRE_ID_TO_KEY = {
     "1": "action",
@@ -166,6 +185,23 @@ def steam_settings_dict() -> dict:
         "last_method": meta("last_fetch_method") or "未実行",
         "last_http": meta("last_fetch_http") or "-",
         "last_test_rows": int(meta("last_fetch_test_rows") or 0),
+    }
+
+
+def ui_default(key: str) -> str:
+    value = meta(key)
+    return UI_DEFAULTS[key] if value is None else value
+
+
+def ui_defaults_dict() -> dict:
+    return {
+        "language": ui_default("ui_default_language"),
+        "genre": ui_default("ui_default_genre"),
+        "discount": ui_default("ui_default_discount"),
+        "product_type": ui_default("ui_default_type"),
+        "language_support": ui_default("ui_default_language_support"),
+        "sort": ui_default("ui_default_sort"),
+        "order": ui_default("ui_default_order"),
     }
 
 
@@ -545,27 +581,27 @@ def send_mail(subject, body):
 
 def discount_end_view(value: int | None) -> dict:
     if not value:
-        return {"end_display": "Date TBD", "remaining_display": "", "remaining_seconds": None, "end_level": "unknown", "expired": False}
+        return {"end_display": "日時未定", "remaining_display": "", "end_level": "unknown", "expired": False}
     now_ts = int(datetime.now(timezone.utc).timestamp())
     dt = datetime.fromtimestamp(int(value), timezone.utc).astimezone(local_zone())
     end_display = f"{dt.month}/{dt.day} {dt.strftime('%H:%M')} JST"
     seconds = int(value) - now_ts
     if seconds <= 0:
-        return {"end_display": end_display, "remaining_display": "Ended", "remaining_seconds": 0, "end_level": "expired", "expired": True}
+        return {"end_display": end_display, "remaining_display": "終了", "end_level": "expired", "expired": True}
     days, rem = divmod(seconds, 86400)
     hours = rem // 3600
     if days:
-        remaining = f"Remaining {days} days {hours} hours"
+        remaining = f"残り {days}日{hours}時間"
     else:
         minutes = max(1, (rem % 3600) // 60)
-        remaining = f"Remaining {hours} hours {minutes} minutes"
+        remaining = f"残り {hours}時間{minutes}分"
     if seconds <= 86400:
         level = "urgent"
     elif seconds <= 3 * 86400:
         level = "soon"
     else:
         level = "normal"
-    return {"end_display": end_display, "remaining_display": remaining, "remaining_seconds": seconds, "end_level": level, "expired": False}
+    return {"end_display": end_display, "remaining_display": remaining, "end_level": level, "expired": False}
 
 
 def format_mail(rows, heading="Steam 期間限定無料作品"):
@@ -879,6 +915,27 @@ def toggle_recipient(recipient_id: int):
         return dict(c.execute("SELECT * FROM mail_recipients WHERE id=?", (recipient_id,)).fetchone())
 
 
+@app.get("/api/ui-defaults")
+def api_ui_defaults():
+    return ui_defaults_dict()
+
+
+@app.put("/api/ui-defaults")
+def update_ui_defaults(payload: UiDefaultsPayload):
+    values = {
+        "ui_default_language": payload.language,
+        "ui_default_genre": payload.genre,
+        "ui_default_discount": payload.discount,
+        "ui_default_type": payload.product_type,
+        "ui_default_language_support": payload.language_support,
+        "ui_default_sort": payload.sort,
+        "ui_default_order": payload.order,
+    }
+    for key, value in values.items():
+        meta(key, value)
+    return ui_defaults_dict()
+
+
 @app.get("/api/steam-settings")
 def api_steam_settings():
     return steam_settings_dict()
@@ -939,7 +996,7 @@ def test_steam_settings():
 def recipients_admin(request: Request):
     return templates.TemplateResponse(
         "recipients.html",
-        {"request": request, "rows": recipient_rows(), "today": local_today().isoformat(), "last_scan": format_scan_time(meta("last_scan")), "steam_settings": steam_settings_dict()},
+        {"request": request, "rows": recipient_rows(), "today": local_today().isoformat(), "last_scan": format_scan_time(meta("last_scan")), "steam_settings": steam_settings_dict(), "ui_defaults": ui_defaults_dict()},
     )
 
 
@@ -981,5 +1038,6 @@ def index(request: Request):
             "genre_tabs": [(key, GENRE_LABELS[key]) for key in GENRE_TAB_ORDER],
             "diagnostics": diagnostics,
             "min_discount": MIN_DISCOUNT,
+            "ui_defaults": ui_defaults_dict(),
         },
     )

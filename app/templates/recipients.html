@@ -1,117 +1,59 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-default-language="{{ ui_defaults.language }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Email recipients | Steam Free Bot</title>
-  <script src="/static/i18n.js" defer></script>
+  <title>Steam Free Bot</title>
+  <script>
+{% include "_i18n.js" %}
+  </script>
   <style>
-    :root{color-scheme:dark;--bg:#111827;--panel:#1f2937;--text:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8}*{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:var(--text)}a{color:#7dd3fc}.site-header{position:sticky;top:0;z-index:1000;background:rgba(17,24,39,.96);border-bottom:1px solid #243244;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.header-inner,.page{max-width:1080px;margin:0 auto;padding-left:16px;padding-right:16px}.header-inner{padding-top:8px;padding-bottom:9px}.header-top{display:flex;align-items:center;gap:12px;white-space:nowrap}.nav{display:flex;align-items:center;gap:14px}.nav a{font-size:13px;font-weight:700;text-decoration:none}.header-status{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);min-width:0}.language-control{display:flex;grid-auto-flow:column;align-items:center;gap:5px}.language-control select{width:auto;padding:6px 8px}.scan-time{overflow:hidden;text-overflow:ellipsis}.scan-short{display:none}.scan{padding:7px 11px;border:0;border-radius:8px;background:#e5e7eb;color:#111827;cursor:pointer;font-weight:700;white-space:nowrap}.scan:disabled{opacity:.65;cursor:wait}.scan-mobile{display:none}.brand-row{margin-top:5px} .brand{font-size:20px;font-weight:800}.version{font-size:13px;font-weight:600;color:var(--muted)}.page{padding-top:16px;padding-bottom:30px}.panel{background:#1f2937;padding:20px;margin:16px 0;border-radius:12px}.grid{display:grid;grid-template-columns:minmax(220px,2fr) minmax(180px,1fr) auto;gap:12px;align-items:end}label{display:grid;gap:6px;color:#cbd5e1}input,select{width:100%;padding:10px;border:1px solid #475569;border-radius:8px;background:#0f172a;color:#f8fafc}.check-row input[type=checkbox]{width:auto;padding:0}button{padding:10px 14px;border:0;border-radius:8px;cursor:pointer;font-weight:600}.primary{background:#38bdf8;color:#082f49}.secondary{background:#475569;color:#f8fafc}.danger{background:#ef4444;color:#fff}.resume{background:#4ade80;color:#052e16}.stop{background:#f59e0b;color:#451a03}.muted{color:#94a3b8}.status{display:inline-block;padding:4px 9px;border-radius:999px;font-size:13px;font-weight:700}.active{background:#14532d;color:#bbf7d0}.stopped{background:#7f1d1d;color:#fecaca}.row{display:grid;grid-template-columns:minmax(230px,2fr) minmax(150px,1fr) 110px auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid #374151}.actions{display:flex;gap:8px;flex-wrap:wrap}.message{min-height:24px;margin:8px 0}.error{color:#fca5a5}.success{color:#86efac}.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px}.check-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}.check-row label{display:flex;align-items:center;gap:7px}.settings-actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}.test-result{font-size:13px;color:#cbd5e1}.help{font-size:12px;line-height:1.5;color:#94a3b8}.full{grid-column:1/-1}
-    @media(max-width:760px){.settings-grid{grid-template-columns:1fr}.header-inner,.page{padding-left:10px;padding-right:10px}.header-inner{padding-top:6px;padding-bottom:7px}.header-top{gap:8px}.nav{gap:10px}.nav a{font-size:11px}.header-status{gap:6px;font-size:10px}.scan-time-prefix,.scan-full{display:none}.scan-short{display:inline}.scan{padding:5px 8px;font-size:11px}.scan-desktop{display:none}.scan-mobile{display:inline}.brand-row{margin-top:4px}.brand{font-size:18px}.version{font-size:11px}.page{padding-top:10px}.page h1{font-size:24px;margin:8px 0}.page>.muted{font-size:12px;line-height:1.45}.grid,.row{grid-template-columns:1fr}.actions button{flex:1}.panel{padding:14px}}
+    :root{color-scheme:dark;--bg:#111827;--panel:#1f2937;--text:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8}*{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:var(--text)}a{color:#7dd3fc}.site-header{position:sticky;top:0;z-index:1000;background:rgba(17,24,39,.96);border-bottom:1px solid #243244;backdrop-filter:blur(10px)}.header-inner,.page{max-width:1080px;margin:0 auto;padding:8px 16px}.header-top{display:flex;align-items:center;gap:12px;white-space:nowrap}.nav a{font-size:13px;font-weight:700;text-decoration:none}.header-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.language-control{display:flex;align-items:center;gap:5px}.language-control select{width:auto;padding:6px 8px}.scan{padding:7px 11px;border:0;border-radius:8px;background:#e5e7eb;color:#111827;cursor:pointer;font-weight:700}.brand-row{margin-top:5px}.brand{font-size:20px;font-weight:800}.version{font-size:13px;color:var(--muted)}.page{padding-top:12px;padding-bottom:30px}.panel{background:var(--panel);padding:20px;margin:16px 0;border-radius:12px}.grid{display:grid;grid-template-columns:minmax(220px,2fr) minmax(180px,1fr) auto;gap:12px;align-items:end}.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px}.defaults-grid{display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px}label{display:grid;gap:6px;color:#cbd5e1}input,select{width:100%;padding:10px;border:1px solid #475569;border-radius:8px;background:#0f172a;color:#f8fafc}.check-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}.check-row label{display:flex;align-items:center;gap:7px}.check-row input{width:auto}.settings-actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}button{padding:10px 14px;border:0;border-radius:8px;cursor:pointer;font-weight:600}.primary{background:#38bdf8;color:#082f49}.secondary{background:#475569;color:#f8fafc}.danger{background:#ef4444;color:#fff}.resume{background:#4ade80;color:#052e16}.stop{background:#f59e0b;color:#451a03}.muted,.help{color:var(--muted)}.help{font-size:12px;line-height:1.5}.message{min-height:24px;margin:8px 0}.error{color:#fca5a5}.success{color:#86efac}.status{display:inline-block;padding:4px 9px;border-radius:999px;font-size:13px;font-weight:700}.active{background:#14532d;color:#bbf7d0}.stopped{background:#7f1d1d;color:#fecaca}.row{display:grid;grid-template-columns:minmax(230px,2fr) minmax(150px,1fr) 110px auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid #374151}.actions{display:flex;gap:8px;flex-wrap:wrap}.full{grid-column:1/-1}
+    @media(max-width:760px){.settings-grid,.defaults-grid{grid-template-columns:1fr}.header-inner,.page{padding-left:10px;padding-right:10px}.header-top{gap:7px}.nav a{font-size:11px}.header-status{gap:5px;font-size:10px}.language-control>span,.scan-time-prefix,.scan-full{display:none}.language-control select{padding:5px;font-size:10px}.scan{padding:5px 8px;font-size:11px}.brand{font-size:18px}.version{font-size:11px}.page h1{font-size:24px}.grid,.row{grid-template-columns:1fr}.actions button{flex:1}.panel{padding:14px}}
   </style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="header-inner">
-      <div class="header-top">
-        <nav class="nav" aria-label="Main menu"><a href="/" data-i18n="back_to_games">← Back to games</a></nav>
-        <div class="header-status"><label class="language-control"><span data-i18n="language">Language</span><select class="ui-language" aria-label="Language"><option value="en">English</option><option value="ja">Japanese</option></select></label><span class="scan-time"><span class="scan-time-prefix" data-i18n="last_checked">Last checked:</span> <span class="scan-full">{{ last_scan }}</span><span class="scan-short">{{ last_scan[5:16] if last_scan else 'Never' }}</span></span><button class="scan" id="scan-button" type="button"><span class="scan-desktop" data-i18n="check_now">Check now</span><span class="scan-mobile" data-i18n="check">Check</span></button></div>
+<header class="site-header"><div class="header-inner"><div class="header-top"><nav class="nav"><a href="/" data-i18n="back_to_games">← Back to games</a></nav><div class="header-status"><label class="language-control"><span data-i18n="language">Language</span><select class="ui-language"><option value="en">English</option><option value="ja">Japanese</option></select></label><span class="scan-time"><span class="scan-time-prefix" data-i18n="last_checked">Last checked:</span> <span class="scan-full">{{ last_scan }}</span><span class="scan-short">{{ last_scan[5:16] if last_scan else 'Never' }}</span></span><button class="scan" id="scan-button" type="button" data-i18n="check_now">Check now</button></div></div><div class="brand-row"><span class="brand">Steam Free Bot</span> <span class="version">v1.5.3</span></div></div></header>
+<main class="page">
+  <h1 data-i18n="recipient_title">Email recipient administration</h1>
+  <p class="muted" data-i18n="recipient_description">Delivery stops automatically the day after the end date.</p>
+  <div id="message" class="message" role="status"></div>
+
+  <section class="panel">
+    <h2 data-i18n="ui_defaults">Default display & filter settings</h2>
+    <p class="help" data-i18n="ui_defaults_help">These values are used for a new browser session and by Reset filters.</p>
+    <form id="ui-defaults-form">
+      <div class="defaults-grid">
+        <label><span data-i18n="default_display_language">Default display language</span><select id="default-language"><option value="en" {{ 'selected' if ui_defaults.language == 'en' else '' }}>English</option><option value="ja" {{ 'selected' if ui_defaults.language == 'ja' else '' }}>Japanese</option></select></label>
+        <label><span data-i18n="default_genre">Default genre</span><select id="default-genre">{% for key,label in [('all','All'),('rpg','RPG'),('slg','SLG'),('action','Action'),('adventure','Adventure'),('casual','Casual'),('sports','Sports'),('racing','Racing'),('other','Other')] %}<option value="{{ key }}" {{ 'selected' if ui_defaults.genre == key else '' }} data-i18n="genre_{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+        <label><span data-i18n="default_discount">Default discount</span><select id="default-discount"><option value="all" {{ 'selected' if ui_defaults.discount == 'all' else '' }} data-i18n="discount_all">80% off or more</option><option value="90plus" {{ 'selected' if ui_defaults.discount == '90plus' else '' }} data-i18n="discount_90">90% off or more</option><option value="free" {{ 'selected' if ui_defaults.discount == 'free' else '' }} data-i18n="free_only">Free only</option></select></label>
+        <label><span data-i18n="default_type">Default type</span><select id="default-type"><option value="all" {{ 'selected' if ui_defaults.product_type == 'all' else '' }} data-i18n="any">Any</option><option value="game" {{ 'selected' if ui_defaults.product_type == 'game' else '' }} data-i18n="games_only">Games only</option><option value="dlc" {{ 'selected' if ui_defaults.product_type == 'dlc' else '' }} data-i18n="dlc_only">DLC only</option></select></label>
+        <label><span data-i18n="default_language_support">Default language support</span><select id="default-language-support"><option value="all" {{ 'selected' if ui_defaults.language_support == 'all' else '' }} data-i18n="any">Any</option><option value="en" {{ 'selected' if ui_defaults.language_support == 'en' else '' }} data-i18n="english_only">English only</option><option value="ja" {{ 'selected' if ui_defaults.language_support == 'ja' else '' }} data-i18n="japanese_only">Japanese only</option></select></label>
+        <label><span data-i18n="default_sort">Default sort</span><select id="default-sort"><option value="discount" {{ 'selected' if ui_defaults.sort == 'discount' else '' }} data-i18n="discount_rate">Discount rate</option><option value="name" {{ 'selected' if ui_defaults.sort == 'name' else '' }} data-i18n="name">Name</option><option value="price" {{ 'selected' if ui_defaults.sort == 'price' else '' }} data-i18n="current_price">Current price</option></select></label>
+        <label><span data-i18n="default_order">Default order</span><select id="default-order"><option value="desc" {{ 'selected' if ui_defaults.order == 'desc' else '' }} data-i18n="descending">Descending</option><option value="asc" {{ 'selected' if ui_defaults.order == 'asc' else '' }} data-i18n="ascending">Ascending</option></select></label>
       </div>
-      <div class="brand-row"><span class="brand">Steam Free Bot</span> <span class="version">v1.4.2</span></div>
-    </div>
-  </header>
-  <main class="page">
-    <h1 data-i18n="recipient_title">Email recipient administration</h1>
-    <p class="muted" data-i18n="recipient_description">Delivery stops automatically the day after the end date. Resuming an expired recipient clears the old end date.</p>
+      <div class="settings-actions"><button class="primary" type="submit" data-i18n="save_defaults">Save defaults</button></div>
+    </form>
+  </section>
 
-    <section class="panel">
-      <h2 data-i18n="new_recipient">New recipient</h2>
-      <form id="create-form" class="grid">
-        <label><span data-i18n="email_address">Email address</span><input id="new-email" type="email" required autocomplete="email" placeholder="name@example.com"></label>
-        <label><span data-i18n="delivery_end_optional">Delivery end date (optional)</span><input id="new-end" type="date" min="{{ today }}"></label>
-        <button class="primary" type="submit" data-i18n="register">Add</button>
-      </form>
-      <div id="message" class="message" role="status"></div>
-    </section>
+  <section class="panel" id="steam-settings-panel">
+    <h2 data-i18n="steam_settings">Steam fetch settings</h2><p class="help" data-i18n="steam_settings_help">Configure the fetch method and browser-like headers used to handle HTTP 403 responses.</p>
+    <form id="steam-settings-form"><div class="settings-grid">
+      <label><span data-i18n="fetch_mode">Fetch mode</span><select id="steam-fetch-mode"><option value="auto" {{ 'selected' if steam_settings.fetch_mode == 'auto' else '' }} data-i18n="fetch_auto">Auto</option><option value="ajax" {{ 'selected' if steam_settings.fetch_mode == 'ajax' else '' }} data-i18n="fetch_ajax">Prefer Ajax</option><option value="normal" {{ 'selected' if steam_settings.fetch_mode == 'normal' else '' }} data-i18n="fetch_normal">Normal search only</option></select></label>
+      <label>User-Agent<select id="steam-ua-preset"><option value="chrome" {{ 'selected' if steam_settings.ua_preset == 'chrome' else '' }} data-i18n="chrome_recommended">Chrome-like</option><option value="firefox" {{ 'selected' if steam_settings.ua_preset == 'firefox' else '' }} data-i18n="firefox">Firefox-like</option><option value="custom" {{ 'selected' if steam_settings.ua_preset == 'custom' else '' }} data-i18n="custom">Custom</option></select></label>
+      <label class="full"><span data-i18n="custom_user_agent">Custom User-Agent</span><input id="steam-custom-ua" type="text" value="{{ steam_settings.custom_ua|e }}" data-i18n-placeholder="custom_user_agent_placeholder"></label>
+      <label class="full">Accept-Language<input id="steam-accept-language" type="text" value="{{ steam_settings.accept_language|e }}"></label>
+    </div><div class="check-row"><label><input id="steam-use-session" type="checkbox" {{ 'checked' if steam_settings.use_session else '' }}> <span data-i18n="use_session">Use Session Cookie</span></label><label><input id="steam-use-referer" type="checkbox" {{ 'checked' if steam_settings.use_referer else '' }}> <span data-i18n="add_referer">Send Referer</span></label><label><input id="steam-fallback-403" type="checkbox" {{ 'checked' if steam_settings.fallback_403 else '' }}> <span data-i18n="fallback_403">Fallback</span></label></div><div class="settings-actions"><button class="primary" type="submit" data-i18n="save_settings">Save settings</button><button class="secondary" id="steam-test-button" type="button" data-i18n="steam_connection_test">Test Steam connection</button><span id="steam-test-result"><span data-i18n="last">Last</span>: {{ steam_settings.last_method }} / HTTP {{ steam_settings.last_http }}</span></div></form>
+  </section>
 
-
-    <section class="panel" id="steam-settings-panel">
-      <h2 data-i18n="steam_settings">Steam fetch settings</h2>
-      <p class="help" data-i18n="steam_settings_help">Configure the fetch method and browser-like headers used to handle HTTP 403 responses. Auto (Ajax → normal search) with a Chrome-like User-Agent is recommended.</p>
-      <form id="steam-settings-form">
-        <div class="settings-grid">
-          <label><span data-i18n="fetch_mode">Fetch mode</span>
-            <select id="steam-fetch-mode">
-              <option value="auto" {{ 'selected' if steam_settings.fetch_mode == 'auto' else '' }} data-i18n="fetch_auto">Auto (Ajax → normal search)</option>
-              <option value="ajax" {{ 'selected' if steam_settings.fetch_mode == 'ajax' else '' }} data-i18n="fetch_ajax">Prefer Ajax</option>
-              <option value="normal" {{ 'selected' if steam_settings.fetch_mode == 'normal' else '' }} data-i18n="fetch_normal">Normal search only</option>
-            </select>
-          </label>
-          <label>User-Agent
-            <select id="steam-ua-preset">
-              <option value="chrome" {{ 'selected' if steam_settings.ua_preset == 'chrome' else '' }} data-i18n="chrome_recommended">Chrome-like (recommended)</option>
-              <option value="firefox" {{ 'selected' if steam_settings.ua_preset == 'firefox' else '' }} data-i18n="firefox">Firefox-like</option>
-              <option value="custom" {{ 'selected' if steam_settings.ua_preset == 'custom' else '' }} data-i18n="custom">Custom</option>
-            </select>
-          </label>
-          <label class="full"><span data-i18n="custom_user_agent">Custom User-Agent</span>
-            <input id="steam-custom-ua" type="text" value="{{ steam_settings.custom_ua|e }}" placeholder="Used only when Custom is selected" data-i18n-placeholder="custom_user_agent_placeholder">
-          </label>
-          <label class="full">Accept-Language
-            <input id="steam-accept-language" type="text" value="{{ steam_settings.accept_language|e }}">
-          </label>
-        </div>
-        <div class="check-row">
-          <label><input id="steam-use-session" type="checkbox" {{ 'checked' if steam_settings.use_session else '' }}> <span data-i18n="use_session">Use Session Cookie</span></label>
-          <label><input id="steam-use-referer" type="checkbox" {{ 'checked' if steam_settings.use_referer else '' }}> <span data-i18n="add_referer">Send Referer</span></label>
-          <label><input id="steam-fallback-403" type="checkbox" {{ 'checked' if steam_settings.fallback_403 else '' }}> <span data-i18n="fallback_403">Fall back to normal search on HTTP 403</span></label>
-        </div>
-        <div class="settings-actions">
-          <button class="primary" type="submit" data-i18n="save_settings">Save settings</button>
-          <button class="secondary" id="steam-test-button" type="button" data-i18n="steam_connection_test">Test Steam connection</button>
-          <span class="test-result" id="steam-test-result"><span data-i18n="last">Last</span>: {{ steam_settings.last_method }} / HTTP {{ steam_settings.last_http }}{% if steam_settings.last_test_rows %} / {{ steam_settings.last_test_rows }} <span data-i18n="items">items</span>{% endif %}</span>
-        </div>
-      </form>
-    </section>
-
-    <section class="panel">
-      <h2 data-i18n="registered_recipients">Registered recipients</h2>
-      <div id="recipient-list">
-        {% for row in rows %}
-        <div class="row" data-id="{{ row.id }}">
-          <input class="email" type="email" value="{{ row.email }}" aria-label="Email address" data-i18n-aria-label="email_address">
-          <input class="end-date" type="date" value="{{ row.delivery_end_date or '' }}" aria-label="Delivery end date" data-i18n-aria-label="delivery_end">
-          <span class="status {{ 'stopped' if row.stopped else 'active' }}" data-i18n="{{ 'stopped' if row.stopped else 'active' }}">{{ 'Stopped' if row.stopped else 'Active' }}</span>
-          <div class="actions">
-            <button class="secondary save" type="button" data-i18n="edit">Save</button>
-            <button class="{{ 'resume' if row.stopped else 'stop' }} toggle" type="button" data-i18n="{{ 'resume' if row.stopped else 'stop' }}">{{ 'Resume' if row.stopped else 'Stop' }}</button>
-            <button class="danger delete" type="button" data-i18n="delete">Delete</button>
-          </div>
-        </div>
-        {% else %}
-        <p class="muted empty" data-i18n="no_recipients">No recipients are registered.</p>
-        {% endfor %}
-      </div>
-    </section>
-  </main>
-
-  <script>
-    const message=document.getElementById('message');
-    const tr=(key,values)=>window.SteamFreeI18n?window.SteamFreeI18n.t(key,values):key;
-    function showMessage(text,isError=false){message.textContent=text;message.className='message '+(isError?'error':'success')}
-    async function api(url,options={}){const response=await fetch(url,{headers:{'Content-Type':'application/json'},...options});if(!response.ok){let text=tr('operation_failed');try{const body=await response.json();text=body.detail||text}catch{}throw new Error(text)}if(response.status===204)return null;return response.json()}
-    const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-    async function waitForScan(){for(;;){const r=await fetch('/api/scan/status',{cache:'no-store'});if(!r.ok)throw new Error('status failed');const st=await r.json();if(!st.running){if(st.error)throw new Error(st.error);location.reload();return}await sleep(1500)}}
-    document.getElementById('scan-button').addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;const old=b.innerHTML;b.textContent=tr('scanning');try{const r=await fetch('/api/scan',{method:'POST'});if(!r.ok)throw new Error('scan start failed');const st=await r.json();if(!st.started&&!st.running)throw new Error(st.error||'scan did not start');await waitForScan()}catch(err){b.disabled=false;b.innerHTML=old;alert(tr('scan_failed')+' '+(err.message||''))}});
-
-    const steamSettingsForm=document.getElementById('steam-settings-form');
-    const steamTestResult=document.getElementById('steam-test-result');
-    function steamSettingsBody(){return {fetch_mode:document.getElementById('steam-fetch-mode').value,ua_preset:document.getElementById('steam-ua-preset').value,custom_ua:document.getElementById('steam-custom-ua').value,accept_language:document.getElementById('steam-accept-language').value,use_session:document.getElementById('steam-use-session').checked,use_referer:document.getElementById('steam-use-referer').checked,fallback_403:document.getElementById('steam-fallback-403').checked}}
-    steamSettingsForm.addEventListener('submit',async event=>{event.preventDefault();showMessage('');try{await api('/api/steam-settings',{method:'PUT',body:JSON.stringify(steamSettingsBody())});showMessage(tr('settings_saved'))}catch(error){showMessage(error.message,true)}});
-    document.getElementById('steam-test-button').addEventListener('click',async event=>{const b=event.currentTarget;b.disabled=true;const old=b.textContent;b.textContent=tr('testing');steamTestResult.textContent=tr('connecting');try{await api('/api/steam-settings',{method:'PUT',body:JSON.stringify(steamSettingsBody())});const r=await api('/api/steam-settings/test',{method:'POST'});if(r.ok){steamTestResult.textContent=`${tr('success')}: ${r.method} / HTTP ${r.http} / ${r.rows} ${tr('items')} (${tr('parsed_discounts')} ${r.discount_rows})`}else{steamTestResult.textContent=`${tr('failure')}: ${r.method} / HTTP ${r.http} / ${r.error||''}`}}catch(error){steamTestResult.textContent=tr('failure')+': '+error.message}finally{b.disabled=false;b.textContent=old}});
-
-    document.getElementById('create-form').addEventListener('submit',async event=>{event.preventDefault();showMessage('');try{await api('/api/recipients',{method:'POST',body:JSON.stringify({email:document.getElementById('new-email').value,delivery_end_date:document.getElementById('new-end').value||null})});location.reload()}catch(error){showMessage(error.message,true)}});
-    document.getElementById('recipient-list').addEventListener('click',async event=>{const row=event.target.closest('.row');if(!row||!event.target.matches('button'))return;showMessage('');const id=row.dataset.id;try{if(event.target.classList.contains('save')){await api(`/api/recipients/${id}`,{method:'PUT',body:JSON.stringify({email:row.querySelector('.email').value,delivery_end_date:row.querySelector('.end-date').value||null})})}else if(event.target.classList.contains('toggle')){await api(`/api/recipients/${id}/toggle`,{method:'POST'})}else if(event.target.classList.contains('delete')){if(!confirm(tr('delete_confirm')))return;await api(`/api/recipients/${id}`,{method:'DELETE'})}location.reload()}catch(error){showMessage(error.message,true)}});
-  </script>
-</body>
-</html>
+  <section class="panel"><h2 data-i18n="new_recipient">New recipient</h2><form id="create-form" class="grid"><label><span data-i18n="email_address">Email address</span><input id="new-email" type="email" required autocomplete="email" placeholder="name@example.com"></label><label><span data-i18n="delivery_end_optional">Delivery end date (optional)</span><input id="new-end" type="date" min="{{ today }}"></label><button class="primary" type="submit" data-i18n="register">Add</button></form></section>
+  <section class="panel"><h2 data-i18n="registered_recipients">Registered recipients</h2><div id="recipient-list">{% for row in rows %}<div class="row" data-id="{{ row.id }}"><input class="email" type="email" value="{{ row.email }}"><input class="end-date" type="date" value="{{ row.delivery_end_date or '' }}"><span class="status {{ 'stopped' if row.stopped else 'active' }}" data-i18n="{{ 'stopped' if row.stopped else 'active' }}">{{ 'Stopped' if row.stopped else 'Active' }}</span><div class="actions"><button class="secondary save" type="button" data-i18n="edit">Save</button><button class="{{ 'resume' if row.stopped else 'stop' }} toggle" type="button" data-i18n="{{ 'resume' if row.stopped else 'stop' }}">Toggle</button><button class="danger delete" type="button" data-i18n="delete">Delete</button></div></div>{% else %}<p class="muted" data-i18n="no_recipients">No recipients are registered.</p>{% endfor %}</div></section>
+</main>
+<script>
+const msg=document.getElementById('message');const tr=(k,v)=>window.SteamFreeI18n?window.SteamFreeI18n.t(k,v):k;function showMessage(t,e=false){msg.textContent=t;msg.className='message '+(e?'error':'success')}async function api(url,options={}){const r=await fetch(url,{headers:{'Content-Type':'application/json'},...options});if(!r.ok){let t=tr('operation_failed');try{const b=await r.json();t=b.detail||t}catch{}throw new Error(t)}if(r.status===204)return null;return r.json()}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));async function waitForScan(){for(;;){const r=await fetch('/api/scan/status',{cache:'no-store'}),s=await r.json();if(!s.running){if(s.error)throw new Error(s.error);location.reload();return}await sleep(1500)}}document.getElementById('scan-button').addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;b.textContent=tr('scanning');try{const r=await fetch('/api/scan',{method:'POST'}),s=await r.json();if(!s.started&&!s.running)throw new Error(s.error||'scan did not start');await waitForScan()}catch(err){b.disabled=false;alert(tr('scan_failed')+' '+err.message)}});
+function defaultsBody(){return{language:document.getElementById('default-language').value,genre:document.getElementById('default-genre').value,discount:document.getElementById('default-discount').value,product_type:document.getElementById('default-type').value,language_support:document.getElementById('default-language-support').value,sort:document.getElementById('default-sort').value,order:document.getElementById('default-order').value}}document.getElementById('ui-defaults-form').addEventListener('submit',async e=>{e.preventDefault();try{const body=defaultsBody();await api('/api/ui-defaults',{method:'PUT',body:JSON.stringify(body)});localStorage.setItem('steamfree-language',body.language);if(window.SteamFreeI18n)window.SteamFreeI18n.applyLanguage(body.language,true);document.documentElement.dataset.defaultLanguage=body.language;showMessage(tr('defaults_saved'))}catch(err){showMessage(err.message,true)}});
+function steamBody(){return{fetch_mode:document.getElementById('steam-fetch-mode').value,ua_preset:document.getElementById('steam-ua-preset').value,custom_ua:document.getElementById('steam-custom-ua').value,accept_language:document.getElementById('steam-accept-language').value,use_session:document.getElementById('steam-use-session').checked,use_referer:document.getElementById('steam-use-referer').checked,fallback_403:document.getElementById('steam-fallback-403').checked}}document.getElementById('steam-settings-form').addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/steam-settings',{method:'PUT',body:JSON.stringify(steamBody())});showMessage(tr('settings_saved'))}catch(err){showMessage(err.message,true)}});document.getElementById('steam-test-button').addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;b.textContent=tr('testing');try{await api('/api/steam-settings',{method:'PUT',body:JSON.stringify(steamBody())});const r=await api('/api/steam-settings/test',{method:'POST'});document.getElementById('steam-test-result').textContent=(r.ok?tr('success'):tr('failure'))+`: ${r.method} / HTTP ${r.http} / ${r.rows||0}`;}catch(err){document.getElementById('steam-test-result').textContent=tr('failure')+': '+err.message}finally{b.disabled=false;b.textContent=tr('steam_connection_test')}});
+document.getElementById('create-form').addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/recipients',{method:'POST',body:JSON.stringify({email:document.getElementById('new-email').value,delivery_end_date:document.getElementById('new-end').value||null})});location.reload()}catch(err){showMessage(err.message,true)}});document.getElementById('recipient-list').addEventListener('click',async e=>{const row=e.target.closest('.row');if(!row||!e.target.matches('button'))return;const id=row.dataset.id;try{if(e.target.classList.contains('save'))await api(`/api/recipients/${id}`,{method:'PUT',body:JSON.stringify({email:row.querySelector('.email').value,delivery_end_date:row.querySelector('.end-date').value||null})});else if(e.target.classList.contains('toggle'))await api(`/api/recipients/${id}/toggle`,{method:'POST'});else if(e.target.classList.contains('delete')){if(!confirm(tr('delete_confirm')))return;await api(`/api/recipients/${id}`,{method:'DELETE'})}location.reload()}catch(err){showMessage(err.message,true)}});
+</script>
+</body></html>

@@ -3,6 +3,9 @@ data/
 logs/
 __pycache__/
 *.pyc
+*.pyo
 *.db
 *.sqlite*
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
