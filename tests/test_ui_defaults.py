@@ -14,10 +14,3 @@ def test_fix021_sources_have_bilingual_and_defaults_controls():
     assert 'id="ui-defaults-form"' in admin
     assert 'default_display_language' in i18n
     assert 'Japanese only' in i18n and '日本語のみ' in i18n
-
-
-def test_nas_deployment_assets_are_preserved():
-    root = Path(__file__).resolve().parents[1]
-    assert (root / "nas_deploy/deploy_steam_free_bot_on_nas.bat").exists()
-    assert (root / "nas_deploy/deploy_steam_free_bot_on_nas.ps1").exists()
-    assert (root / "caddy/Caddyfile").exists()

@@ -37,12 +37,13 @@ Use a Google app password in `SMTP_PASSWORD`, not your normal Google Account pas
 ## Tests
 
 ```bash
-python -m unittest discover -s tests -v
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
 ```
 
 ## Security
 
-This public edition does not include user authentication. Add an authenticated reverse proxy, VPN, or another access-control layer before exposing the administration pages to the internet.
+This public edition does not include user authentication. The provided Docker Compose configuration binds port 8000 to 127.0.0.1 only, so it is not reachable from other LAN hosts by default. If you intentionally expose it to a LAN or the internet, add an authenticated reverse proxy, VPN, or another access-control layer first.
 
 Never commit any of the following:
 

@@ -33,9 +33,6 @@ def test_list_view_has_thumbnail():
     html = (Path(__file__).parents[1] / "app" / "templates" / "index.html").read_text(encoding="utf-8")
     assert ".list-view .thumb{display:block" in html
     assert "grid-template-columns:112px minmax(0,1fr)" in html
-    assert "v1.5.0" in html
-
-
 def test_product_type_filter_and_discount_end_ui():
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]

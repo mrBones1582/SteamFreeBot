@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 data/
 logs/
 __pycache__/
@@ -9,3 +11,4 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.publisher-venv/

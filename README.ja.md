@@ -38,12 +38,13 @@ docker compose up -d --build
 ## テスト
 
 ```bash
-python -m unittest discover -s tests -v
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
 ```
 
 ## セキュリティ
 
-この公開版には利用者認証を組み込んでいません。インターネットへ公開する場合は、認証付きリバースプロキシ、VPN、アクセス制御などを追加してください。
+この公開版には利用者認証を組み込んでいません。付属のDocker Composeは既定で127.0.0.1:8000のみにバインドするため、他のLAN端末からも直接アクセスできません。LANやインターネットへ意図的に公開する場合は、先に認証付きリバースプロキシ、VPN、アクセス制御などを追加してください。
 
 次のデータはGitへ追加しないでください。
 
