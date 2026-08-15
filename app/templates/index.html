@@ -35,7 +35,7 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="header-line">
-        <h1>Steam Free Bot <small class="muted version">v1.5.3</small></h1>
+        <h1>Steam Free Bot <small class="muted version">v1.5.9</small></h1>
         <p class="description" data-i18n="description" data-discount="{{ min_discount }}">Collects Steam Store titles at {{ min_discount }}% off or more and verifies price, language support, genre, type, and sale end time.</p>
         <div class="header-status">
           <label class="language-control"><span data-i18n="language">Language</span><select class="ui-language" aria-label="Language"><option value="en">English</option><option value="ja">Japanese</option></select></label>
@@ -46,7 +46,7 @@
       </div>
       <div class="resultbar header-resultbar">
         <span><span data-i18n="showing">Showing</span>: <span class="count" id="visible-count">0</span> / {{ rows|length }} <span data-i18n="items">items</span></span>
-        <details class="diag-details"><summary data-i18n="scan_info">Scan details</summary><span class="diag">検索{{ diagnostics.search_rows }}件 → 割引率解析{{ diagnostics.discount_parsed }}件（最大{{ diagnostics.max_discount }}%）→ 80%以上候補{{ diagnostics.candidates }}件 → 確定{{ diagnostics.verified }}件 / エラー{{ diagnostics.errors }}件<br>取得: {{ diagnostics.fetch_method }} / HTTP {{ diagnostics.fetch_http }}</span></details>
+        <details class="diag-details"><summary data-i18n="scan_info">Scan details</summary><span class="diag">検索{{ diagnostics.search_rows }}件 → 割引率解析{{ diagnostics.discount_parsed }}件（最大{{ diagnostics.max_discount }}%）→ 80%以上候補{{ diagnostics.candidates }}件 → 確定{{ diagnostics.verified }}件 / エラー{{ diagnostics.errors }}件<br>取得: {{ diagnostics.fetch_method }} / HTTP {{ diagnostics.fetch_http }}{% if diagnostics.error_summary %}<br>エラー内訳: {{ diagnostics.error_summary }}{% endif %}{% if diagnostics.deponia %}<br>Deponia(214340): 検索={{ diagnostics.deponia.search_sources or '-' }} / 検索割引={{ diagnostics.deponia.search_discount if diagnostics.deponia.search_discount is not none else '-' }}% / verify={{ diagnostics.deponia.verify_status }} / appdetails HTTP={{ diagnostics.deponia.appdetails_http or '-' }} 割引={{ diagnostics.deponia.appdetails_discount if diagnostics.deponia.appdetails_discount is not none else '-' }} final={{ diagnostics.deponia.appdetails_final if diagnostics.deponia.appdetails_final is not none else '-' }} / store HTTP={{ diagnostics.deponia.store_http or '-' }} F2K={{ diagnostics.deponia.store_free_to_keep if diagnostics.deponia.store_free_to_keep is not none else '-' }} / {{ diagnostics.deponia.verify_reason or diagnostics.deponia.error_type or '-' }}{% else %}<br>Deponia(214340): 今回の候補に存在しません{% endif %}<br>詳細JSON: /api/scan/debug?appid=214340</span></details>
         <div class="view-switch" aria-label="View format" data-i18n-aria-label="view_format"><button type="button" class="view-btn active" data-view="list" data-i18n="list">List</button><button type="button" class="view-btn" data-view="card" data-i18n="card">Cards</button></div>
       </div>
     </div>

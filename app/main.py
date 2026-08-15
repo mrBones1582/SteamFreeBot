@@ -7,6 +7,7 @@ import sqlite3
 import smtplib
 import ssl
 import threading
+import time
 from datetime import date, datetime, timezone
 from email.message import EmailMessage
 from pathlib import Path
@@ -33,7 +34,7 @@ LANG = os.getenv("STEAM_LANGUAGE", "english")
 MIN_DISCOUNT = int(os.getenv("MIN_DISCOUNT_PERCENT", "80"))
 MAX_SEARCH_PAGES = int(os.getenv("MAX_SEARCH_PAGES", "12"))
 
-app = FastAPI(title="Steam Free Bot", version="1.5.3")
+app = FastAPI(title="Steam Free Bot", version="1.5.9")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 
@@ -148,6 +149,33 @@ def conn():
             stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN (0,1)),
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
+        )"""
+    )
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS scan_debug(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scan_id TEXT NOT NULL,
+            appid INTEGER NOT NULL,
+            title TEXT DEFAULT '',
+            url TEXT DEFAULT '',
+            search_sources TEXT DEFAULT '',
+            search_discount INTEGER,
+            search_row_text TEXT DEFAULT '',
+            verify_status TEXT DEFAULT 'pending',
+            verify_reason TEXT DEFAULT '',
+            appdetails_http INTEGER,
+            appdetails_success INTEGER,
+            appdetails_discount INTEGER,
+            appdetails_initial INTEGER,
+            appdetails_final INTEGER,
+            appdetails_is_free INTEGER,
+            store_http INTEGER,
+            store_free_to_keep INTEGER,
+            error_stage TEXT DEFAULT '',
+            error_type TEXT DEFAULT '',
+            error_message TEXT DEFAULT '',
+            created_at TEXT NOT NULL,
+            UNIQUE(scan_id, appid)
         )"""
     )
     c.commit()
@@ -277,7 +305,27 @@ def _fetch_search_response(session: requests.Session, params: dict, preferred: s
 
 
 def _search_rows_from_response(response):
-    soup = BeautifulSoup(response.text, "html.parser")
+    """Return Steam search rows from either normal HTML or Ajax JSON.
+
+    /search/results/ normally returns JSON with the actual result markup in
+    results_html. Treating that JSON document itself as HTML yields zero
+    search rows even though HTTP 200 was successful, which prevents Auto mode
+    from discovering current promotions.
+    """
+    html = response.text or ""
+
+    stripped = html.lstrip()
+    if stripped.startswith("{") or stripped.startswith("["):
+        try:
+            payload = response.json()
+        except (ValueError, TypeError):
+            payload = None
+        if isinstance(payload, dict):
+            candidate = payload.get("results_html")
+            if isinstance(candidate, str):
+                html = candidate
+
+    soup = BeautifulSoup(html, "html.parser")
     return soup.select("a.search_result_row")
 
 
@@ -389,14 +437,208 @@ def _discount_from_search_row(row) -> int | None:
     return max(values) if values else None
 
 
-def discover():
-    """Discover Steam sale candidates using configurable request strategy."""
+
+LAST_DISCOVERY_DEBUG: dict[int, dict] = {}
+
+
+def _remember_search_candidate(appid: int, url: str, source: str, row, discount: int | None):
+    """Keep compact search-stage evidence for the current scan."""
+    info = LAST_DISCOVERY_DEBUG.setdefault(appid, {
+        "appid": appid, "url": url or "", "sources": [],
+        "search_discount": None, "search_row_text": "",
+    })
+    if source not in info["sources"]:
+        info["sources"].append(source)
+    if discount is not None:
+        current = info.get("search_discount")
+        info["search_discount"] = discount if current is None else max(current, discount)
+    text = row.get_text(" ", strip=True) if row is not None else ""
+    if text and (not info.get("search_row_text") or discount == 100 or _search_row_looks_zero_price(row)):
+        info["search_row_text"] = text[:1000]
+    if url:
+        info["url"] = url
+
+
+def _search_row_looks_zero_price(row) -> bool:
+    """Return True when a Steam search row visibly represents a zero-price offer.
+
+    Steam can expose Free-to-Keep promotions in the lowest-price search even
+    when the same app is not represented as a 100% discount in the ordinary
+    Discount_DESC feed.  Treat the search row only as candidate discovery;
+    verify() remains authoritative and rejects permanent free-to-play titles.
+    """
+    text = row.get_text(" ", strip=True)
+    if re.search(r"-\s*100\s*%", text, re.IGNORECASE):
+        return True
+    zero_patterns = (
+        r"(?:^|\s)¥\s*0(?:\s|$)",
+        r"(?:^|\s)￥\s*0(?:\s|$)",
+        r"(?:^|\s)\$\s*0(?:[.,]00)?(?:\s|$)",
+        r"(?:^|\s)0(?:[.,]00)?\s*(?:USD|JPY)(?:\s|$)",
+        r"(?:^|\s)(?:無料|Free)(?:\s|$)",
+    )
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in zero_patterns)
+
+
+def _discover_lowest_price_special_candidates(session: requests.Session):
+    """Discover visible zero-price specials from Steam's Price_ASC search.
+
+    This mirrors the Store UI path where current Free-to-Keep promotions can
+    appear as -100% / ¥0 even when maxprice=free or Discount_DESC discovery
+    misses them.  Only visibly zero-price/100%-off rows are admitted.
+    """
     found: dict[int, str] = {}
-    start = 0
     scanned_rows = 0
     parsed_discount_rows = 0
     max_discount_seen = 0
+    start = 0
+    seen_first_appids: set[int] = set()
+
+    for _ in range(MAX_SEARCH_PAGES):
+        params = {
+            "query": "",
+            "start": start,
+            "count": 100,
+            "dynamic_data": "",
+            "sort_by": "Price_ASC",
+            "specials": "1",
+            "hidef2p": "1",
+            "ignore_preferences": "1",
+            "cc": COUNTRY,
+            "l": LANG,
+        }
+        response, _method = _fetch_search_response(session, params)
+        rows = _search_rows_from_response(response)
+        if not rows:
+            break
+
+        first_ids = []
+        for row in rows[:5]:
+            raw = row.get("data-ds-appid") or ""
+            m = re.search(r"\d+", raw)
+            if m:
+                first_ids.append(int(m.group()))
+        if start and first_ids and all(x in seen_first_appids for x in first_ids):
+            break
+        seen_first_appids.update(first_ids)
+
+        scanned_rows += len(rows)
+        any_zero = False
+        for row in rows:
+            appid_raw = row.get("data-ds-appid") or ""
+            discount = _discount_from_search_row(row)
+            if discount is not None:
+                parsed_discount_rows += 1
+                max_discount_seen = max(max_discount_seen, discount)
+            if not _search_row_looks_zero_price(row):
+                continue
+            any_zero = True
+            m = re.search(r"\d+", appid_raw)
+            if m:
+                appid = int(m.group())
+                href = row.get("href", "")
+                found[appid] = href
+                _remember_search_candidate(appid, href, "price_asc", row, discount)
+
+        # Price_ASC puts zero-price rows first.  Once a complete page contains
+        # no visible zero-price offer, later pages cannot add useful candidates.
+        if not any_zero or len(rows) < 20:
+            break
+        start += len(rows)
+
+    return found, scanned_rows, parsed_discount_rows, max_discount_seen
+
+def _discover_free_search_candidates(session: requests.Session):
+    """Discover zero-price specials through Steam's dedicated free-price search.
+
+    Free-to-Keep promotions are not guaranteed to appear as 100% discounts in
+    the ordinary Discount_DESC result set.  Steam's maxprice=free search is a
+    separate discovery path and has historically exposed those promotions.
+    Do not require a parsable -100% marker here: verify() performs the final
+    Free-to-Keep vs permanent-F2P decision from appdetails + purchase page.
+    """
+    found: dict[int, str] = {}
+    scanned_rows = 0
+    parsed_discount_rows = 0
+    max_discount_seen = 0
+    start = 0
+    seen_first_appids: set[int] = set()
+
+    # Free-to-Keep promotions are normally a very small result set, but allow
+    # pagination while retaining the same duplicate-page guard as discover().
+    for _ in range(MAX_SEARCH_PAGES):
+        params = {
+            "query": "",
+            "start": start,
+            "count": 100,
+            "dynamic_data": "",
+            "sort_by": "Price_ASC",
+            "specials": "1",
+            "hidef2p": "1",
+            "maxprice": "free",
+            "ignore_preferences": "1",
+            "cc": COUNTRY,
+            "l": LANG,
+        }
+        response, _method = _fetch_search_response(session, params)
+        rows = _search_rows_from_response(response)
+        if not rows:
+            break
+
+        first_ids = []
+        for row in rows[:5]:
+            raw = row.get("data-ds-appid") or ""
+            m = re.search(r"\d+", raw)
+            if m:
+                first_ids.append(int(m.group()))
+        if start and first_ids and all(x in seen_first_appids for x in first_ids):
+            break
+        seen_first_appids.update(first_ids)
+
+        scanned_rows += len(rows)
+        for row in rows:
+            appid_raw = row.get("data-ds-appid") or ""
+            discount = _discount_from_search_row(row)
+            if discount is not None:
+                parsed_discount_rows += 1
+                max_discount_seen = max(max_discount_seen, discount)
+            m = re.search(r"\d+", appid_raw)
+            if m:
+                # maxprice=free + hidef2p=1 is only candidate discovery.
+                # verify() remains authoritative, so even markup without a
+                # discount percentage is intentionally admitted here.
+                appid = int(m.group())
+                href = row.get("href", "")
+                found[appid] = href
+                _remember_search_candidate(appid, href, "maxprice_free", row, discount)
+
+        if len(rows) < 20:
+            break
+        start += len(rows)
+
+    return found, scanned_rows, parsed_discount_rows, max_discount_seen
+
+
+def discover():
+    """Discover discounted and Free-to-Keep Steam candidates."""
+    LAST_DISCOVERY_DEBUG.clear()
     session = _steam_session()
+
+    # IMPORTANT: free-price discovery must be independent from the ordinary
+    # discount-sorted search.  Promotions such as Deponia can be omitted from
+    # the latter as a 100% row even while Steam exposes a zero-price license.
+    found, scanned_rows, parsed_discount_rows, max_discount_seen = _discover_free_search_candidates(session)
+
+    # Steam's Store UI can expose a current Free-to-Keep title at the top of
+    # the lowest-price specials list even when the dedicated free-price or
+    # Discount_DESC feeds miss it. Merge that discovery path as well.
+    price_found, price_scanned, price_parsed, price_max = _discover_lowest_price_special_candidates(session)
+    found.update(price_found)
+    scanned_rows += price_scanned
+    parsed_discount_rows += price_parsed
+    max_discount_seen = max(max_discount_seen, price_max)
+
+    start = 0
     seen_first_appids: set[int] = set()
     for _ in range(MAX_SEARCH_PAGES):
         params = {
@@ -411,7 +653,7 @@ def discover():
             "cc": COUNTRY,
             "l": LANG,
         }
-        response, method = _fetch_search_response(session, params)
+        response, _method = _fetch_search_response(session, params)
         rows = _search_rows_from_response(response)
         if not rows:
             break
@@ -436,7 +678,10 @@ def discover():
                 continue
             m = re.search(r"\d+", appid_raw)
             if m:
-                found[int(m.group())] = row.get("href", "")
+                appid = int(m.group())
+                href = row.get("href", "")
+                found[appid] = href
+                _remember_search_candidate(appid, href, "discount_desc", row, discount)
         if len(rows) < 20:
             break
         start += len(rows)
@@ -460,27 +705,45 @@ def _extract_discount_expiration_from_html(html: str, now_ts: int | None = None)
     return min(values) if values else None
 
 
-def fetch_discount_expiration(appid: int) -> int | None:
-    """Fetch the Steam store page and extract the sale-end countdown timestamp.
+def _is_free_to_keep_html(html: str) -> bool:
+    """Return True only for a temporary Steam Free-to-Keep purchase block.
 
-    Failure to obtain an end time must not discard an otherwise valid discount.
+    Do not classify permanent free-to-play products as Free-to-Keep.  We look
+    inside Steam purchase blocks and require an explicit temporary-ownership
+    phrase plus either the account-add action or a 100% discount marker.
     """
-    try:
-        r = requests.get(
-            f"https://store.steampowered.com/app/{appid}/",
-            params={"cc": COUNTRY, "l": LANG},
-            headers=_steam_headers(f"https://store.steampowered.com/app/{appid}/"),
-            cookies={
-                "birthtime": "315532800",
-                "lastagecheckage": "1-January-1980",
-                "wants_mature_content": "1",
-            },
-            timeout=20,
-        )
-        r.raise_for_status()
-        return _extract_discount_expiration_from_html(r.text)
-    except Exception:
-        return None
+    if not html:
+        return False
+    soup = BeautifulSoup(html, "html.parser")
+    blocks = soup.select(".game_area_purchase_game, .game_area_purchase_game_wrapper")
+    if not blocks:
+        blocks = [soup]
+
+    keep_phrases = (
+        "free to keep",
+        "keep it forever",
+        "無料でキープ",
+        "今後も無料でキープ",
+        "無料で保持",
+    )
+    account_phrases = ("add to account", "アカウントに追加")
+    for block in blocks:
+        text = " ".join(block.stripped_strings)
+        lower = text.casefold()
+        has_keep = any(phrase in lower for phrase in keep_phrases)
+        if not has_keep:
+            continue
+        has_account_action = any(phrase in lower for phrase in account_phrases)
+        has_full_discount = bool(re.search(r"-\s*100\s*%", text))
+        if has_account_action or has_full_discount:
+            return True
+    return False
+
+
+def fetch_discount_expiration(appid: int) -> int | None:
+    """Compatibility wrapper used by tests/older callers."""
+    html = fetch_store_page_html(appid)
+    return _extract_discount_expiration_from_html(html) if html else None
 
 
 def _product_type(data: dict) -> str:
@@ -509,35 +772,195 @@ def _genre_info(data: dict) -> tuple[str, str]:
     return ",".join(sorted(keys)), ", ".join(names)
 
 
-def verify(appid: int, url: str):
-    r = requests.get(
+def _retry_after_seconds(response, fallback: float) -> float:
+    """Return a conservative retry delay for Steam throttling responses."""
+    try:
+        raw = response.headers.get("Retry-After") if getattr(response, "headers", None) else None
+        if raw:
+            return min(15.0, max(0.25, float(raw)))
+    except (TypeError, ValueError):
+        pass
+    return fallback
+
+
+def _steam_get_with_retry(url: str, *, debug: dict | None = None, stage: str = "request", **kwargs):
+    """GET Steam with small bounded retries for 429/5xx/transient network failures.
+
+    The scanner verifies hundreds of candidates in one run. Steam may throttle the
+    appdetails/store endpoints even while search itself still returns HTTP 200.
+    Keep retries bounded so a scan cannot stall indefinitely.
+    """
+    delays = (0.75, 1.5, 3.0)
+    last_exc = None
+    for attempt in range(len(delays) + 1):
+        try:
+            response = requests.get(url, **kwargs)
+            if debug is not None:
+                debug[f"{stage}_http"] = response.status_code
+                debug[f"{stage}_attempts"] = attempt + 1
+            if response.status_code == 429 or 500 <= response.status_code <= 599:
+                if attempt < len(delays):
+                    time.sleep(_retry_after_seconds(response, delays[attempt]))
+                    continue
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_exc = exc
+            if debug is not None:
+                debug["error_stage"] = stage
+                debug["error_type"] = type(exc).__name__
+                debug["error_message"] = str(exc)[:1000]
+            if attempt < len(delays):
+                time.sleep(delays[attempt])
+                continue
+            raise
+    if last_exc:
+        raise last_exc
+    raise RuntimeError(f"Steam request failed at {stage}")
+
+
+def _search_says_promotional_free(appid: int) -> bool:
+    """Return True when Steam search showed a real 100% discount to zero.
+
+    Permanent F2P products may have appdetails.is_free=true, but they normally do
+    not appear as a -100% sale row with a prior paid price. This search evidence is
+    what distinguishes the current Deponia promotion from ordinary F2P.
+    """
+    search = LAST_DISCOVERY_DEBUG.get(appid, {})
+    if int(search.get("search_discount") or 0) != 100:
+        return False
+    text = str(search.get("search_row_text") or "")
+    # Require an explicit zero price/free marker as well as -100% evidence.
+    zero = bool(re.search(r"(?:[¥￥]\s*0\b|(?:JPY|USD|EUR)\s*0(?:[.,]00)?\b|\$\s*0(?:[.,]00)?\b|\bfree\b|無料)", text, re.I))
+    return zero
+
+
+def fetch_store_page_html(appid: int, debug: dict | None = None) -> str | None:
+    """Fetch one Steam store page and optionally retain diagnostic evidence."""
+    try:
+        r = _steam_get_with_retry(
+            f"https://store.steampowered.com/app/{appid}/",
+            params={"cc": COUNTRY, "l": LANG},
+            headers=_steam_headers(f"https://store.steampowered.com/app/{appid}/"),
+            cookies={
+                "birthtime": "315532800",
+                "lastagecheckage": "1-January-1980",
+                "wants_mature_content": "1",
+            },
+            timeout=20,
+            debug=debug,
+            stage="store",
+        )
+        if debug is not None:
+            debug["store_http"] = r.status_code
+        return r.text
+    except Exception as exc:
+        if debug is not None:
+            debug["error_stage"] = "store_page"
+            debug["error_type"] = type(exc).__name__
+            debug["error_message"] = str(exc)[:1000]
+        return None
+
+
+def verify(appid: int, url: str, debug: dict | None = None):
+    if debug is None:
+        debug = {}
+    debug["verify_status"] = "running"
+    debug["error_stage"] = "appdetails"
+
+    r = _steam_get_with_retry(
         "https://store.steampowered.com/api/appdetails",
         params={"appids": appid, "cc": COUNTRY, "l": LANG},
         headers=_steam_headers("https://store.steampowered.com/search/"),
         timeout=20,
+        debug=debug,
+        stage="appdetails",
     )
-    r.raise_for_status()
-    item = r.json().get(str(appid), {})
+    debug["appdetails_http"] = r.status_code
+    try:
+        payload = r.json()
+    except Exception as exc:
+        debug["error_stage"] = "appdetails_json"
+        debug["error_type"] = type(exc).__name__
+        debug["error_message"] = str(exc)[:1000]
+        raise
+
+    item = payload.get(str(appid), {})
+    debug["appdetails_success"] = 1 if item.get("success") else 0
     data = item.get("data") if item.get("success") else None
-    if not data or data.get("is_free"):
+    if not data:
+        debug["verify_status"] = "rejected"
+        debug["verify_reason"] = "appdetails_success_false_or_no_data"
         return None
+
+    debug["title"] = data.get("name", f"App {appid}")
+    appdetails_is_free = bool(data.get("is_free"))
+    debug["appdetails_is_free"] = 1 if appdetails_is_free else 0
+    search_promotional_free = _search_says_promotional_free(appid)
+
     p = data.get("price_overview") or {}
     discount = int(p.get("discount_percent") or 0)
     initial = int(p.get("initial") or 0)
     final = int(p.get("final") or 0)
-    if discount < MIN_DISCOUNT or initial <= 0:
+    debug["appdetails_discount"] = discount if p else None
+    debug["appdetails_initial"] = initial if p else None
+    debug["appdetails_final"] = final if p else None
+
+    # Critical fix030 rule:
+    # appdetails.is_free=true is NOT sufficient proof of permanent F2P. During
+    # temporary giveaways Steam can return is_free=true and omit price_overview,
+    # while search still explicitly shows -100% and a zero final price.
+    if appdetails_is_free and not search_promotional_free:
+        debug["verify_status"] = "rejected"
+        debug["verify_reason"] = "permanent_free_to_play"
+        return None
+
+    debug["error_stage"] = "store_page"
+    store_html = fetch_store_page_html(appid, debug)
+    store_free_to_keep = _is_free_to_keep_html(store_html or "")
+    debug["store_free_to_keep"] = 1 if store_free_to_keep else 0
+
+    # Search evidence (-100% + zero price) is authoritative enough to keep the
+    # candidate even when appdetails has switched to is_free=true and omitted
+    # price_overview. Store-page wording remains an additional confirmation.
+    free_to_keep = store_free_to_keep or search_promotional_free
+    if free_to_keep:
+        discount = 100
+        final = 0
+    elif discount < MIN_DISCOUNT or initial <= 0:
+        debug["verify_status"] = "rejected"
+        debug["verify_reason"] = "below_min_discount_or_missing_initial"
         return None
 
     supported = data.get("supported_languages") or ""
     japanese_supported = bool(re.search(r"\bJapanese\b|日本語", supported, re.IGNORECASE))
     english_supported = bool(re.search(r"\bEnglish\b|英語", supported, re.IGNORECASE))
     genre_keys, genre_names = _genre_info(data)
+    debug["verify_status"] = "verified"
+    if store_free_to_keep:
+        debug["verify_reason"] = "free_to_keep_store_confirmed"
+    elif search_promotional_free:
+        debug["verify_reason"] = "free_to_keep_search_confirmed"
+    else:
+        debug["verify_reason"] = "ordinary_discount"
+    debug["error_stage"] = ""
+
+    # When price_overview is absent during a giveaway, preserve the useful
+    # human-readable prior price from search only as display text if possible.
+    original_price = p.get("initial_formatted", "")
+    if free_to_keep and not original_price:
+        search_text = str(LAST_DISCOVERY_DEBUG.get(appid, {}).get("search_row_text") or "")
+        prices = re.findall(r"[¥￥]\s*[\d,]+", search_text)
+        nonzero = [x for x in prices if not re.fullmatch(r"[¥￥]\s*0", x)]
+        if nonzero:
+            original_price = nonzero[-1]
+
     return {
         "appid": appid,
         "title": data.get("name", f"App {appid}"),
         "url": url or f"https://store.steampowered.com/app/{appid}/",
-        "original_price": p.get("initial_formatted", ""),
-        "current_price": p.get("final_formatted", "無料" if final == 0 else ""),
+        "original_price": original_price,
+        "current_price": "無料" if free_to_keep else p.get("final_formatted", "無料" if final == 0 else ""),
         "current_price_value": final,
         "discount_percent": discount,
         "japanese_supported": 1 if japanese_supported else 0,
@@ -546,7 +969,7 @@ def verify(appid: int, url: str):
         "genre_names": genre_names,
         "header_image": data.get("header_image") or "",
         "product_type": _product_type(data),
-        "discount_end_ts": fetch_discount_expiration(appid),
+        "discount_end_ts": _extract_discount_expiration_from_html(store_html) if store_html else None,
     }
 
 
@@ -623,22 +1046,100 @@ def format_mail(rows, heading="Steam 期間限定無料作品"):
     return "\n".join(lines)
 
 
+def _persist_scan_debug(scan_id: str, appid: int, url: str, debug: dict):
+    search = LAST_DISCOVERY_DEBUG.get(appid, {})
+    with conn() as c:
+        c.execute(
+            """INSERT INTO scan_debug(
+                scan_id,appid,title,url,search_sources,search_discount,search_row_text,
+                verify_status,verify_reason,appdetails_http,appdetails_success,
+                appdetails_discount,appdetails_initial,appdetails_final,appdetails_is_free,
+                store_http,store_free_to_keep,error_stage,error_type,error_message,created_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(scan_id,appid) DO UPDATE SET
+                title=excluded.title,url=excluded.url,search_sources=excluded.search_sources,
+                search_discount=excluded.search_discount,search_row_text=excluded.search_row_text,
+                verify_status=excluded.verify_status,verify_reason=excluded.verify_reason,
+                appdetails_http=excluded.appdetails_http,appdetails_success=excluded.appdetails_success,
+                appdetails_discount=excluded.appdetails_discount,appdetails_initial=excluded.appdetails_initial,
+                appdetails_final=excluded.appdetails_final,appdetails_is_free=excluded.appdetails_is_free,
+                store_http=excluded.store_http,store_free_to_keep=excluded.store_free_to_keep,
+                error_stage=excluded.error_stage,error_type=excluded.error_type,
+                error_message=excluded.error_message""",
+            (
+                scan_id, appid, debug.get("title", ""), url or search.get("url", ""),
+                ",".join(search.get("sources", [])), search.get("search_discount"),
+                search.get("search_row_text", "")[:1000], debug.get("verify_status", "pending"),
+                debug.get("verify_reason", ""), debug.get("appdetails_http"),
+                debug.get("appdetails_success"), debug.get("appdetails_discount"),
+                debug.get("appdetails_initial"), debug.get("appdetails_final"),
+                debug.get("appdetails_is_free"), debug.get("store_http"),
+                debug.get("store_free_to_keep"), debug.get("error_stage", ""),
+                debug.get("error_type", ""), debug.get("error_message", "")[:1000],
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        c.commit()
+
+
+def _scan_error_summary(scan_id: str) -> str:
+    with conn() as c:
+        rows = c.execute(
+            """SELECT COALESCE(error_stage,'') stage, COALESCE(error_type,'') kind,
+                      COALESCE(appdetails_http,store_http,0) http, COUNT(*) n
+               FROM scan_debug WHERE scan_id=? AND verify_status='error'
+               GROUP BY stage,kind,http ORDER BY n DESC""",
+            (scan_id,),
+        ).fetchall()
+    parts = []
+    for row in rows[:8]:
+        label = row["stage"] or row["kind"] or "unknown"
+        if row["http"]:
+            label += f" HTTP{row['http']}"
+        parts.append(f"{label}:{row['n']}")
+    return " / ".join(parts)
+
+
 def _scan_impl(send_new=True):
     now = datetime.now(timezone.utc).isoformat()
+    scan_id = now
     candidates, scanned_rows, parsed_discount_rows, max_discount_seen = discover()
     verified = []
     errors = 0
+
+    # Persist every discovered candidate before verification so a failure in
+    # appdetails/store-page processing never destroys the evidence.
     for appid, url in candidates.items():
+        _persist_scan_debug(scan_id, appid, url, {"verify_status": "pending"})
+
+    ordered_candidates = sorted(
+        candidates.items(),
+        key=lambda pair: (
+            0 if int(LAST_DISCOVERY_DEBUG.get(pair[0], {}).get("search_discount") or 0) == 100 else 1,
+            pair[0],
+        ),
+    )
+    for appid, url in ordered_candidates:
+        debug = {"verify_status": "running"}
         try:
-            x = verify(appid, url)
+            x = verify(appid, url, debug)
             if x:
                 verified.append(x)
-        except Exception:
+        except Exception as exc:
             errors += 1
+            debug["verify_status"] = "error"
+            debug.setdefault("error_type", type(exc).__name__)
+            debug.setdefault("error_message", str(exc)[:1000])
+            if not debug.get("error_stage"):
+                debug["error_stage"] = "verify"
+        finally:
+            _persist_scan_debug(scan_id, appid, url, debug)
 
     new_free = []
     with conn() as c:
-        c.execute("UPDATE promotions SET active=0")
+        # Diagnostic mode: do NOT blanket-deactivate previous promotions.
+        # Network/JSON failures must not erase last-known-good rows while the
+        # Steam acquisition bug is being investigated.
         for x in verified:
             old = c.execute("SELECT * FROM promotions WHERE appid=?", (x["appid"],)).fetchone()
             c.execute(
@@ -682,6 +1183,8 @@ def _scan_impl(send_new=True):
     meta("last_max_discount", max_discount_seen)
     meta("last_candidates", len(candidates))
     meta("last_errors", errors)
+    meta("last_scan_debug_id", scan_id)
+    meta("last_error_summary", _scan_error_summary(scan_id))
 
     if send_new and new_free and os.getenv("SEND_NEW_ITEM_IMMEDIATELY", "true").lower() == "true":
         ok, _ = send_mail(
@@ -822,6 +1325,34 @@ def promotions():
             "SELECT * FROM promotions WHERE active=1 AND (discount_end_ts IS NULL OR discount_end_ts > ?) ORDER BY discount_percent DESC,title COLLATE NOCASE",
             (now_ts,),
         )]
+
+
+@app.get("/api/scan/debug")
+def api_scan_debug(appid: int | None = None, limit: int = 300):
+    """Return retained diagnostic rows from the latest scan (or one AppID)."""
+    limit = max(1, min(int(limit), 1000))
+    latest = meta("last_scan_debug_id")
+    with conn() as c:
+        if appid is not None:
+            rows = c.execute(
+                """SELECT * FROM scan_debug WHERE appid=?
+                   ORDER BY id DESC LIMIT ?""",
+                (appid, limit),
+            ).fetchall()
+        elif latest:
+            rows = c.execute(
+                """SELECT * FROM scan_debug WHERE scan_id=?
+                   ORDER BY CASE verify_status WHEN 'error' THEN 0 WHEN 'rejected' THEN 1 ELSE 2 END, appid
+                   LIMIT ?""",
+                (latest, limit),
+            ).fetchall()
+        else:
+            rows = []
+    return {
+        "scan_id": latest,
+        "error_summary": meta("last_error_summary") or "",
+        "rows": [dict(row) for row in rows],
+    }
 
 
 @app.post("/api/scan", status_code=202)
@@ -1028,7 +1559,17 @@ def index(request: Request):
         "errors": int(meta("last_errors") or 0),
         "fetch_method": meta("last_fetch_method") or "-",
         "fetch_http": meta("last_fetch_http") or "-",
+        "error_summary": meta("last_error_summary") or "",
     }
+    latest_debug = meta("last_scan_debug_id")
+    diagnostics["deponia"] = None
+    if latest_debug:
+        with conn() as c:
+            probe = c.execute(
+                "SELECT * FROM scan_debug WHERE scan_id=? AND appid=214340",
+                (latest_debug,),
+            ).fetchone()
+            diagnostics["deponia"] = dict(probe) if probe else None
     return templates.TemplateResponse(
         "index.html",
         {
