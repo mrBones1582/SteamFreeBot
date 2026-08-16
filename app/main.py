@@ -34,7 +34,7 @@ LANG = os.getenv("STEAM_LANGUAGE", "english")
 MIN_DISCOUNT = int(os.getenv("MIN_DISCOUNT_PERCENT", "80"))
 MAX_SEARCH_PAGES = int(os.getenv("MAX_SEARCH_PAGES", "12"))
 
-app = FastAPI(title="Steam Free Bot", version="1.5.9")
+app = FastAPI(title="Steam Free Bot", version="1.6.0")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 
@@ -772,12 +772,49 @@ def _genre_info(data: dict) -> tuple[str, str]:
     return ",".join(sorted(keys)), ", ".join(names)
 
 
+STEAM_REQUEST_RATE_LOCK = threading.Lock()
+STEAM_REQUEST_NEXT_AT = {"appdetails": 0.0, "store": 0.0}
+STEAM_REQUEST_MIN_INTERVAL = {
+    "appdetails": float(os.getenv("STEAM_APPDETAILS_MIN_INTERVAL", "1.00")),
+    "store": float(os.getenv("STEAM_STORE_MIN_INTERVAL", "0.25")),
+}
+STEAM_REQUEST_BACKOFF_UNTIL = {"appdetails": 0.0, "store": 0.0}
+
+
+def _throttle_steam_request(stage: str):
+    """Globally pace high-volume Steam detail requests.
+
+    A scan can verify 200+ candidates. Per-request retries alone still hammer the
+    same endpoint after a 429. This limiter serializes appdetails/store traffic
+    and honors a shared cooldown raised by any throttled request.
+    """
+    key = "appdetails" if stage == "appdetails" else "store" if stage.startswith("store") else None
+    if key is None:
+        return
+    with STEAM_REQUEST_RATE_LOCK:
+        now = time.monotonic()
+        target = max(STEAM_REQUEST_NEXT_AT[key], STEAM_REQUEST_BACKOFF_UNTIL[key])
+        wait = target - now
+        if wait > 0:
+            time.sleep(wait)
+        STEAM_REQUEST_NEXT_AT[key] = time.monotonic() + STEAM_REQUEST_MIN_INTERVAL[key]
+
+
+def _apply_steam_backoff(stage: str, seconds: float):
+    key = "appdetails" if stage == "appdetails" else "store" if stage.startswith("store") else None
+    if key is None:
+        return
+    with STEAM_REQUEST_RATE_LOCK:
+        until = time.monotonic() + max(1.0, seconds)
+        STEAM_REQUEST_BACKOFF_UNTIL[key] = max(STEAM_REQUEST_BACKOFF_UNTIL[key], until)
+
+
 def _retry_after_seconds(response, fallback: float) -> float:
     """Return a conservative retry delay for Steam throttling responses."""
     try:
         raw = response.headers.get("Retry-After") if getattr(response, "headers", None) else None
         if raw:
-            return min(15.0, max(0.25, float(raw)))
+            return min(60.0, max(1.0, float(raw)))
     except (TypeError, ValueError):
         pass
     return fallback
@@ -790,17 +827,24 @@ def _steam_get_with_retry(url: str, *, debug: dict | None = None, stage: str = "
     appdetails/store endpoints even while search itself still returns HTTP 200.
     Keep retries bounded so a scan cannot stall indefinitely.
     """
-    delays = (0.75, 1.5, 3.0)
+    delays = (2.0, 5.0, 10.0, 20.0)
     last_exc = None
     for attempt in range(len(delays) + 1):
         try:
+            _throttle_steam_request(stage)
             response = requests.get(url, **kwargs)
             if debug is not None:
                 debug[f"{stage}_http"] = response.status_code
                 debug[f"{stage}_attempts"] = attempt + 1
             if response.status_code == 429 or 500 <= response.status_code <= 599:
+                retry_delay = _retry_after_seconds(response, delays[min(attempt, len(delays) - 1)])
+                if response.status_code == 429:
+                    # Slow every subsequent request to this endpoint, not only
+                    # the current item. This prevents a retry storm.
+                    _apply_steam_backoff(stage, retry_delay)
+                    key = "appdetails" if stage == "appdetails" else "store"
+                    STEAM_REQUEST_MIN_INTERVAL[key] = max(STEAM_REQUEST_MIN_INTERVAL[key], 2.0)
                 if attempt < len(delays):
-                    time.sleep(_retry_after_seconds(response, delays[attempt]))
                     continue
             response.raise_for_status()
             return response
